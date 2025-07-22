@@ -4,6 +4,8 @@ import time
 from bot.factories import CommandFactory
 from bot.decorators import log_command, require_auth
 from bot.handlers import Handler, CensorshipHandler, LoggingHandler
+import io
+
 
 
 # Singleton pattern: тільки один екземпляр TelegramBot
@@ -63,6 +65,21 @@ class TelegramBot:
         payload = {"chat_id": chat_id, "text": text}
         requests.post(url, json=payload)
 
+    def send_image(self, chat_id, image):
+        url = self.url + "sendPhoto"
+
+        bio = io.BytesIO()
+        bio.name = 'image.png'
+        image.save(bio, 'PNG')
+        bio.seek(0)  # Возвращаем указатель в начало буфера
+
+        # Отправляем POST-запрос с изображением
+
+        files = {'photo': (bio.name, bio, 'image/png')}
+        payload = {'chat_id': chat_id}
+        # url = f'https://api.telegram.org/bot{self.token}/sendPhoto'
+        requests.post(url, files=files, data=payload)
+
     def run(self):
         update = self.get_last_update()
         if update:
@@ -82,7 +99,10 @@ class TelegramBot:
                     import sys
                     sys.exit(0)
                 else:
-                    self.send_message(chat_id, reply)
+                    if type(reply) == str:
+                        self.send_message(chat_id, reply)
+                    else:
+                        self.send_image(chat_id, reply)
 
                 # self.send_message(chat_id, reply)
                 self.last_update_id = update["update_id"]
